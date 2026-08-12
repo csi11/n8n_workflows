@@ -1,0 +1,1078 @@
+{
+  "name": "Számlázás",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 9,
+              "triggerAtMinute": 11
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1056,
+        80
+      ],
+      "id": "f3809d25-5263-42a8-a987-7603ffbf6b3a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "formTitle": "Invoice request form",
+        "formDescription": "To Issue an invoice type in the following fields.\n\nYou'll get a response when invoice is successfully issued.\n\nIf your code doesn't match, You'll be informed and no invoice will be issued.\n",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Customer name"
+            },
+            {
+              "fieldLabel": "Customer passcode",
+              "fieldType": "number"
+            },
+            {
+              "fieldLabel": "Give net amount in USD"
+            },
+            {
+              "fieldLabel": "exchange_rate"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -1952,
+        -496
+      ],
+      "id": "d9ca5c50-36b9-4872-8c5b-7d83340c2e59",
+      "name": "Invoice request from web",
+      "webhookId": "af8c42bf-aa0b-429a-b095-3b5108874fad"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "DATA_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Invoice data table",
+          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/DATA_TABLE_ID"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Customer_code",
+              "keyValue": "123"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -1328,
+        -496
+      ],
+      "id": "f286f07e-3360-4623-8426-177953da960c",
+      "name": "Get row(s) - Data extration from table",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ba884191-7082-4d84-a522-be6795023388",
+              "name": "Customer name",
+              "value": "={{ $('Invoice request from web').item.json['Customer name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "362fb909-990e-4554-8fd2-f52ed3a8dbea",
+              "name": "Customer passcode",
+              "value": "={{ $('Invoice request from web').item.json['Customer passcode'] }}",
+              "type": "number"
+            },
+            {
+              "id": "45b24353-f055-45b5-9359-234612f30bf7",
+              "name": "Give net amount in USD",
+              "value": "={{ $('Code - parsing number fields').item.json[\"Give net amount in USD\"] }}",
+              "type": "number"
+            },
+            {
+              "id": "d946f8a1-9326-41ae-a351-7c8e4f89a215",
+              "name": "exchange_rate",
+              "value": "={{ $('Code - parsing number fields').item.json.exchange_rate }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1152,
+        -496
+      ],
+      "id": "03d38948-d1ea-4111-80f9-17a6129d0631",
+      "name": "Edit Fields - Combine data"
+    },
+    {
+      "parameters": {
+        "content": "Get other necessary data from table for the exact customer then combine all data to one output.\n",
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1344,
+        -576
+      ],
+      "id": "09b77078-b991-4286-b1f7-3517dd907713",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Check whether customer passcode given on form matches customer code. If no, reply to user on form. Else go on.",
+        "width": 416
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -576
+      ],
+      "id": "7548727b-8131-43ed-a800-7f8ac474f49c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "showText",
+        "responseText": "The customer code you entered is not valid. Please check your code and try again, or contact us for assistance."
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        -544,
+        -320
+      ],
+      "id": "cc8b799d-203f-4119-9a75-13136e8969c3",
+      "name": "Form - false reply",
+      "webhookId": "9c52fae6-aa26-48bf-bde9-b1230e19c8e4"
+    },
+    {
+      "parameters": {
+        "content": "Requesting and storing API token. Password is not stored in request. Request only if really needed.",
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1936,
+        16
+      ],
+      "id": "c8f23083-9922-4a40-b19b-aab74d911084",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1936,
+        80
+      ],
+      "id": "f2d9b7e2-2e3b-42d3-b26c-ddfbf56b08b2",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "content": "Creating the invoice data, than convert it base64 coded with code node to be sent to endpoint by http Request node\n",
+        "width": 644
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -576
+      ],
+      "id": "7d27c091-4c5d-43ff-b563-71be411645ff",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "exchange_rate should be entered on webform. Possible development: get FX rate from mnb.hu\n",
+        "color": "#FFFF80"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        -816
+      ],
+      "id": "fcdbe40d-6ab4-43d3-a5c9-2800bcda8f8d",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "unused fields from data table should be deleted\npartner email may be deleted if SLM will use partner database",
+        "color": "#FFFF80"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1264,
+        -816
+      ],
+      "id": "9b31eca9-4227-43bf-bdfc-d242a3ba153f",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5a9a5a89-5dcc-4a86-8417-bbd8f3f29738",
+              "leftValue": "={{ $json[\"Customer passcode\"] }}",
+              "rightValue": "={{ $json.Customer_code }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -784,
+        -496
+      ],
+      "id": "a1b876f2-9ef1-4b64-bfda-fdd524509c23",
+      "name": "Customer code validation",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.example.hu/billing/login",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "username",
+              "value": "YOUR_VAT_NUMBER"
+            },
+            {
+              "name": "password"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1728,
+        80
+      ],
+      "id": "2e9c7fb7-f0f9-4db4-b6aa-51ed75d5339d",
+      "name": "HTTP Request - get token",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.example.hu/invoiceToSLM",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "request",
+              "value": "={{ $json.request }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        112,
+        -512
+      ],
+      "id": "d80eeaca-364f-45ff-bf33-481afe2fe5b7",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "DATA_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "SLM API",
+          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/DATA_TABLE_ID"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "1"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -528,
+        -512
+      ],
+      "id": "002380ab-c2d3-4e4d-97f2-db549962b96c",
+      "name": "using token"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $('Edit Fields - Combine data').item.json;\nconst token = $('using token').item.json.token;\nconst companyVat = $('using token').item.json.vat;\n\n// --- Date logic (web form branch: issue=today, completion=today, due=issue+5) ---\nconst now = new Date();\nconst completionDate = new Date(now); // date_of_delivery = today\nconst dueDate = new Date(now);\ndueDate.setDate(dueDate.getDate() + 5); // payment_deadline = today + 5\n\nconst fmt = (d) => d.toISOString().split('T')[0]; // YYYY-MM-DD\n\n// --- Amount from web form ---\nconst netAmount = row['Give net amount in USD'];\n\n// --- Build nested payload per doc structure ---\nconst fullPayload = {\n  token: token,\nvat: companyVat, // your own company adószám, from 'SLM API' table\n  data: {\n    head: {\n      SLM_partner_data: row.SLM_partner_data,\n      sync_partner_data: row.sync_partner_data,\n      partner: {\n        name: row.partner_name,\n        vat: row.partner_vat,\n        eu_vat: row.partner_eu_vat,\n        address: {\n          zip: row.partner_address_zip,\n          city: row.partner_address_city,\n          street: row.partner_address_street,\n          number: row.partner_address_number,\n          country: row.partner_address_country\n        },\n        email: row.partner_email\n      },\n      storno: false,\n      payment_method: row.payment_method,\n      date_of_delivery: fmt(completionDate),\n      payment_deadline: fmt(dueDate),\n      creation_date: fmt(now),\n      gross_amount: \"\",\n      currency: row.currency,\n      exchange_rate: row.exchange_rate,\n      bank_account: row.bank_account,\n      invoice_book: row.invoice_book,\n      sites: row.sites,\n      note: \"\"\n    },\n    items: [\n      {\n        item_name: row.item_name,\n        item_ammount_unit: row.item_ammount_unit,\n        item_ammount: row.item_ammount,\n        vat: String(row.vat_code),\n        net_unit_price: netAmount,\n        item_note: \"\"\n      }\n    ]\n  }\n};\n\nreturn [{\n  json: fullPayload\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        -512
+      ],
+      "id": "78679f44-891e-4fd5-b7b1-8c807da9b6de",
+      "name": "Code - create invoce data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.first().json;\n\n// UTF-8 safe base64 encoding (handles accented characters in partner names etc.)\nconst jsonString = JSON.stringify(payload);\nconst base64Request = Buffer.from(jsonString, 'utf-8').toString('base64');\n\nreturn [{\n  json: {\n    request: base64Request\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -512
+      ],
+      "id": "582d49df-54fb-49d6-886b-5c83047c1566",
+      "name": "Code - base64"
+    },
+    {
+      "parameters": {
+        "content": "3rd country VAT code field does not exist in API endpoint so process could not be executed for 3rd country partners.",
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1760,
+        -784
+      ],
+      "id": "cc81ddea-fc1a-4b80-884d-03585f6ebe0f",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "DATA_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Invoice data table",
+          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/DATA_TABLE_ID"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Customer_code",
+              "keyValue": "999"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -896,
+        80
+      ],
+      "id": "9171620e-49ec-4cb3-8c2c-90527ded83dd",
+      "name": "Get row(s) - Data extration from table1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "DATA_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "SLM API",
+          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/DATA_TABLE_ID"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "1"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -528,
+        80
+      ],
+      "id": "c0fdea46-d64b-4937-982e-e7620ddf9ba5",
+      "name": "using token1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $('Get row(s) - Data extration from table1').item.json;\nconst token = $('using token1').item.json.token;\nconst companyVat = $('using token1').item.json.vat;\n\n// --- Date logic (schedule branch: issue=today, completion=today-1, due=today+5) ---\nconst now = new Date();\nconst completionDate = new Date(now);\ncompletionDate.setDate(completionDate.getDate() - 1); // date_of_delivery = today - 1\nconst dueDate = new Date(now);\ndueDate.setDate(dueDate.getDate() + 5); // payment_deadline = today + 5 (from today, not from completion)\n\nconst fmt = (d) => d.toISOString().split('T')[0]; // YYYY-MM-DD\n\n// --- Amount: fixed value from table (schedule branch has one recurring partner/amount) ---\nconst netAmount = row.fixed_net_amount;\n\n// --- Build nested payload per doc structure ---\nconst fullPayload = {\n  token: token,\n  vat: companyVat, // your own company adószám, from token table\n  data: {\n    head: {\n      SLM_partner_data: row.SLM_partner_data,\n      sync_partner_data: row.sync_partner_data,\n      partner: {\n        name: row.partner_name,\n        vat: row.partner_vat,\n        eu_vat: row.partner_eu_vat,\n        address: {\n          zip: row.partner_address_zip,\n          city: row.partner_address_city,\n          street: row.partner_address_street,\n          number: row.partner_address_number,\n          country: row.partner_address_country\n        },\n        email: row.partner_email\n      },\n      storno: false,\n      payment_method: row.payment_method,\n      date_of_delivery: fmt(completionDate),\n      payment_deadline: fmt(dueDate),\n      creation_date: fmt(now),\n      gross_amount: \"\",\n      currency: row.currency, // from table\n      exchange_rate: row.exchange_rate,\n      bank_account: row.bank_account,\n      invoice_book: row.invoice_book,\n      sites: row.sites,\n      note: \"\"\n    },\n    items: [\n      {\n        item_name: row.item_name,\n        item_ammount_unit: row.item_ammount_unit,\n        item_ammount: row.item_ammount,\n        vat: String(row.vat_code),\n        net_unit_price: netAmount,\n        item_note: \"\"\n      }\n    ]\n  }\n};\n\nreturn [{\n  json: fullPayload\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        80
+      ],
+      "id": "e9f81b67-1b36-4ff3-8370-d624772da427",
+      "name": "Code - create invoce data1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.example.hu/invoiceToSLM",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "request",
+              "value": "={{ $json.request }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        112,
+        80
+      ],
+      "id": "3896c4ec-bb09-464a-b4fa-4a3537e37b0d",
+      "name": "HTTP Request1",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.first().json;\n\n// UTF-8 safe base64 encoding (handles accented characters in partner names etc.)\nconst jsonString = JSON.stringify(payload);\nconst base64Request = Buffer.from(jsonString, 'utf-8').toString('base64');\n\nreturn [{\n  json: {\n    request: base64Request\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        80
+      ],
+      "id": "6b6ff9ac-fbd2-467e-bb1d-35c6d9a1723c",
+      "name": "Code - base64_1"
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "Invoice issued successfully",
+        "message": "=An invoice to {{ $('Get row(s) - Data extration from table1').item.json.partner_name }} with an amount of {{ $('Get row(s) - Data extration from table1').item.json.currency }} {{ $('Get row(s) - Data extration from table1').item.json.fixed_net_amount }} couldn't be issued at {{ $('Code - create invoce data1').item.json.data.head.creation_date }} due to error: error code: {{ $('HTTP Request1').item.json.error }} error message: {{ $('HTTP Request1').item.json.error_message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -16
+      ],
+      "id": "d8afa989-7de6-49e3-b061-5b8ede25a353",
+      "name": "Send a message",
+      "webhookId": "38a1750c-4f78-496c-8185-d2a3ddfdb57f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1tNfDugjiU20Clbw",
+          "name": "Gmail OAuth2 API"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5110d162-c061-4bb4-b2b3-abf30ccae120",
+              "leftValue": 2,
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        336,
+        80
+      ],
+      "id": "cce84abe-a57c-43cc-8ad8-7f5935ad7d59",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "Invoice was not issued due to an error",
+        "message": "=An invoice to {{ $('Get row(s) - Data extration from table1').item.json.partner_name }} with an amount of {{ $('Get row(s) - Data extration from table1').item.json.currency }} {{ $('Get row(s) - Data extration from table1').item.json.fixed_net_amount }} couldn't be issued at {{ $('Code - create invoce data1').item.json.data.head.creation_date }} due to error:\nerror code: {{ $('HTTP Request1').item.json.error }}\nerror message: {{ $('HTTP Request1').item.json.error_message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        192
+      ],
+      "id": "b2e3e44c-8e6d-4454-bf90-4d52390b9d3d",
+      "name": "Send a message1",
+      "webhookId": "a8f8a447-99b1-4798-9f88-192151e59ca9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1tNfDugjiU20Clbw",
+          "name": "Gmail OAuth2 API"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "Monthly invoce generation, every invoice data is the same except for dates.",
+        "width": 352
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        0
+      ],
+      "id": "b2344ea8-ee16-4906-a145-bf144ab8da69",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\nfunction parseAmount(value) {\n  if (typeof value !== 'string') return { value, valid: true };\n  const normalized = value.trim().replace(',', '.');\n  const parsed = parseFloat(normalized);\n  if (isNaN(parsed)) {\n    return { value: null, valid: false, original: value };\n  }\n  return { value: parsed, valid: true };\n}\n\nconst amountResult = parseAmount(row['Give net amount in USD']);\nconst rateResult = parseAmount(row['exchange_rate']);\n\nconst isValid = amountResult.valid && rateResult.valid;\n\nreturn [{\n  json: {\n    ...row,\n    'Give net amount in USD': amountResult.value,\n    'exchange_rate': rateResult.value,\n    isValidAmount: isValid,\n    amountValidationError: isValid\n\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1760,
+        -496
+      ],
+      "id": "485eb501-4c71-4f8c-83f0-c3f965cd4531",
+      "name": "Code - parsing number fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4fe682b4-ef06-4bfc-94e0-73d94a4155ce",
+              "leftValue": "={{ $json.isValidAmount }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1568,
+        -496
+      ],
+      "id": "8145d2a4-4cbd-4cf8-880a-8f4f74ff3933",
+      "name": "If - check number format"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Invalid number(s) on form",
+        "completionMessage": "Net amount or excange rate is invalid. Please try again.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        -1408,
+        -336
+      ],
+      "id": "7be7a1be-9d0f-463c-b8b6-16048616f6e2",
+      "name": "Form invalid number",
+      "webhookId": "39cb8793-09ad-406c-b41e-0f0a41562be2"
+    },
+    {
+      "parameters": {
+        "content": "Request invoice amount and FX rate from user on a web form. Checks amunt and rate number format.",
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1968,
+        -576
+      ],
+      "id": "956d2a2e-30c5-40f1-b8d8-c651a694a142",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=Invoice issued successfully\n\nAn invoice to {{ $('Get row(s) - Data extration from table1').item.json.partner_name }} with an amount of {{ $('Get row(s) - Data extration from table1').item.json.currency }} {{ $('Get row(s) - Data extration from table1').item.json.fixed_net_amount }} couldn't be issued at {{ $('Code - create invoce data1').item.json.data.head.creation_date }} due to error: error code: {{ $('HTTP Request1').item.json.error }} error message: {{ $('HTTP Request1').item.json.error_message }}\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        -16
+      ],
+      "id": "43301487-07d5-421e-870d-c7704996f238",
+      "name": "Send a text message",
+      "webhookId": "8e2c0a1d-9a78-40d0-bcb0-a7c15b521d22",
+      "credentials": {
+        "telegramApi": {
+          "id": "QVowmR5drK4L1WrS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=Invoice was not issued due to an error\n\n\nAn invoice to {{ $('Get row(s) - Data extration from table1').item.json.partner_name }} with an amount of {{ $('Get row(s) - Data extration from table1').item.json.currency }} {{ $('Get row(s) - Data extration from table1').item.json.fixed_net_amount }} couldn't be issued at {{ $('Code - create invoce data1').item.json.data.head.creation_date }} due to error:\nerror code: {{ $('HTTP Request1').item.json.error }}\nerror message: {{ $('HTTP Request1').item.json.error_message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        192
+      ],
+      "id": "c068da9e-af71-4050-bca7-3fe1d38728e6",
+      "name": "Send a text message1",
+      "webhookId": "8e2c0a1d-9a78-40d0-bcb0-a7c15b521d22",
+      "credentials": {
+        "telegramApi": {
+          "id": "QVowmR5drK4L1WrS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "\nCould be used email notification, now it is deactivated.\n",
+        "height": 592,
+        "width": 288,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -176
+      ],
+      "id": "465c06fe-ebb4-4140-b60f-e5a11bec61e6",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5110d162-c061-4bb4-b2b3-abf30ccae120",
+              "leftValue": 2,
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        320,
+        -512
+      ],
+      "id": "16c646cf-ac62-4a84-9b1b-05531daab24c",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "result",
+        "completionMessage": "Invoice sussessfully issued.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        560,
+        -576
+      ],
+      "id": "dca95256-1282-445e-9057-20d351097db5",
+      "name": "Form - success",
+      "webhookId": "fd8ed11e-0c3b-46cc-8caf-27299d841297"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "result",
+        "completionMessage": "=Inwoice couldn't be issued due to an error.\n\nError code: {{ $json.error }}\nError message: {{ $json.error_message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        560,
+        -400
+      ],
+      "id": "f24973b1-75e5-4382-a7ee-45da92adb6ef",
+      "name": "Form - error",
+      "webhookId": "fd8ed11e-0c3b-46cc-8caf-27299d841297"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) - Data extration from table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice request from web": {
+      "main": [
+        [
+          {
+            "node": "Code - parsing number fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) - Data extration from table": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields - Combine data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields - Combine data": {
+      "main": [
+        [
+          {
+            "node": "Customer code validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - get token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer code validation": {
+      "main": [
+        [
+          {
+            "node": "using token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form - false reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "using token": {
+      "main": [
+        [
+          {
+            "node": "Code - create invoce data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - create invoce data": {
+      "main": [
+        [
+          {
+            "node": "Code - base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - base64": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) - Data extration from table1": {
+      "main": [
+        [
+          {
+            "node": "using token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "using token1": {
+      "main": [
+        [
+          {
+            "node": "Code - create invoce data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - create invoce data1": {
+      "main": [
+        [
+          {
+            "node": "Code - base64_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - base64_1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - parsing number fields": {
+      "main": [
+        [
+          {
+            "node": "If - check number format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - check number format": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) - Data extration from table",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form invalid number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Form - success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Form - error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ab3b6b8b-943e-4699-98d2-26cd22dc92ca",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "29966e1691878acbfc84ea510fc5d6e6d727298cea5c366568a4613912a361d3"
+  },
+  "nodeGroups": [],
+  "id": "NKkzWdoU5sU2qeu3",
+  "tags": []
+}
