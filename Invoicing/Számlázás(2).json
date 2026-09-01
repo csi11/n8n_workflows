@@ -61,10 +61,10 @@
         "operation": "get",
         "dataTableId": {
           "__rl": true,
-          "value": "DATA_TABLE_ID",
+          "value": "BS9rsE6J5gwT9Zik",
           "mode": "list",
           "cachedResultName": "Invoice data table",
-          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/DATA_TABLE_ID"
+          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/BS9rsE6J5gwT9Zik"
         },
         "matchType": "allConditions",
         "filters": {
@@ -277,7 +277,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.example.hu/billing/login",
+        "url": "https://api.slm.hu/billing/login",
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
@@ -315,7 +315,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.example.hu/invoiceToSLM",
+        "url": "https://api.slm.hu/invoiceToSLM",
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
@@ -344,10 +344,10 @@
         "operation": "get",
         "dataTableId": {
           "__rl": true,
-          "value": "DATA_TABLE_ID",
+          "value": "ZW3ddNRVJfyogr8r",
           "mode": "list",
           "cachedResultName": "SLM API",
-          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/DATA_TABLE_ID"
+          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/ZW3ddNRVJfyogr8r"
         },
         "matchType": "allConditions",
         "filters": {
@@ -413,10 +413,10 @@
         "operation": "get",
         "dataTableId": {
           "__rl": true,
-          "value": "DATA_TABLE_ID",
+          "value": "BS9rsE6J5gwT9Zik",
           "mode": "list",
           "cachedResultName": "Invoice data table",
-          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/DATA_TABLE_ID"
+          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/BS9rsE6J5gwT9Zik"
         },
         "matchType": "allConditions",
         "filters": {
@@ -444,10 +444,10 @@
         "operation": "get",
         "dataTableId": {
           "__rl": true,
-          "value": "DATA_TABLE_ID",
+          "value": "ZW3ddNRVJfyogr8r",
           "mode": "list",
           "cachedResultName": "SLM API",
-          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/DATA_TABLE_ID"
+          "cachedResultUrl": "/projects/COIL3jgdjIsjdh2h/datatables/ZW3ddNRVJfyogr8r"
         },
         "matchType": "allConditions",
         "filters": {
@@ -484,7 +484,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.example.hu/invoiceToSLM",
+        "url": "https://api.slm.hu/invoiceToSLM",
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
@@ -557,7 +557,7 @@
           "conditions": [
             {
               "id": "5110d162-c061-4bb4-b2b3-abf30ccae120",
-              "leftValue": 2,
+              "leftValue": "={{ $json.error }}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
@@ -696,7 +696,7 @@
     {
       "parameters": {
         "chatId": "YOUR_CHAT_ID",
-        "text": "=Invoice issued successfully\n\nAn invoice to {{ $('Get row(s) - Data extration from table1').item.json.partner_name }} with an amount of {{ $('Get row(s) - Data extration from table1').item.json.currency }} {{ $('Get row(s) - Data extration from table1').item.json.fixed_net_amount }} couldn't be issued at {{ $('Code - create invoce data1').item.json.data.head.creation_date }} due to error: error code: {{ $('HTTP Request1').item.json.error }} error message: {{ $('HTTP Request1').item.json.error_message }}\n",
+        "text": "=Invoice issued successfully\n\nAn invoice to {{ $('Get row(s) - Data extration from table1').item.json.partner_name }} \nwith an amount of {{ $('Get row(s) - Data extration from table1').item.json.currency }} {{ $('Get row(s) - Data extration from table1').item.json.fixed_net_amount }} \nwas issued successfully.\n\n",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
@@ -1061,13 +1061,16 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "QwZlMzcxdd8JRzwZ",
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "ab3b6b8b-943e-4699-98d2-26cd22dc92ca",
+  "versionId": "2b8bfde2-d2d8-485f-8a69-1dfe2e906e35",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "29966e1691878acbfc84ea510fc5d6e6d727298cea5c366568a4613912a361d3"
