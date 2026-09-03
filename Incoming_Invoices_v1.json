@@ -1,0 +1,948 @@
+{
+  "name": "Incoming Invoices",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "hour": 10,
+              "minute": 30
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": ""
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -2192,
+        80
+      ],
+      "id": "fc7c0b31-764d-4e58-ae4d-6f3153e46d0a",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filters items to only those with invoice-related subjects.\n// Avoids false positives like \"Számlakivonat\" (bank statement).\n\nconst includeKeywords = ['szamla', 'bill', 'invoice', 'receipt', 'megrendelesed'];\nconst excludeKeywords = ['szamlakivonat']; // bank statement, not an invoice\n\nfunction normalize(str) {\n  return str\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, ''); // strip accents: á->a, é->e, etc.\n}\n\nconst results = [];\n\nfor (const item of $input.all()) {\n  const subject = item.json.subject || '';\n  const normalizedSubject = normalize(subject);\n\n  // split subject into words on any non-letter character\n  const words = normalizedSubject.split(/[^a-z]+/).filter(Boolean);\n\n  const isExcluded = words.some(w =>\n    excludeKeywords.some(ex => w.startsWith(ex))\n  );\n\n  const isMatch = !isExcluded && words.some(w =>\n    includeKeywords.some(kw => w.startsWith(kw))\n  );\n\n  if (isMatch) {\n    results.push(item);\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1968,
+        80
+      ],
+      "id": "aee84883-b0aa-43e9-930a-3e8ca9d45295",
+      "name": "Code - filter emails"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a70b7ae1-69d1-4ae4-955c-f573accbb27e",
+              "leftValue": "={{ Object.values($binary || {}).some(b => b.mimeType === 'application/pdf') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1744,
+        80
+      ],
+      "id": "e46fdb89-749d-459f-987e-2afb81067fd0",
+      "name": "If - has attachment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const excludeKeywords = ['receipt', 'nyugta', 'rendeles', 'aszf', 'gtc', 'order'];\n\nfunction normalize(str) {\n  return str.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n}\n\nfunction isExcluded(filename) {\n  const words = normalize(filename || '').split(/[^a-z]+/).filter(Boolean);\n  return words.some(w => excludeKeywords.some(ex => w.startsWith(ex)));\n}\n\nconst item = $input.first();\nconst outputItems = [];\n\nfor (const [key, b] of Object.entries(item.binary || {})) {\n  if (!isExcluded(b.fileName)) {\n    outputItems.push({\n      json: item.json,\n      binary: { data: b }\n    });\n  }\n}\n\nif (outputItems.length === 0) {\n  return [{ json: { ...item.json, allExcluded: true }, binary: {} }];\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -64
+      ],
+      "id": "fc29f993-a13c-49b0-929d-34a996cf6818",
+      "name": "Code - atmnt name chk"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f49c45bf-b9eb-46a3-af6d-91f3ba787d9a",
+              "leftValue": "={{ $json.allExcluded === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        -64
+      ],
+      "id": "b41e7d4f-e7e8-446b-a9b5-08d76ec7d3e8",
+      "name": "If - nofile to save"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🗑️\n\nHello,\n\nYou received an email with title referring to an invoice attached, but attachment seems not to be an invoice. Please check attachment.\n\nEmail title:  {{ $json.subject\n\n}}\n\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        -176
+      ],
+      "id": "4ade340d-43aa-4e6b-ac7f-8c4cf5157e38",
+      "name": "Send a text message",
+      "webhookId": "YOUR_WEBHOOK_ID_1",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $binary.data.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "https://drive.google.com/drive/folders/YOUR_DRIVE_FOLDER_ID",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1248,
+        192
+      ],
+      "id": "e186737e-aa46-4902-8141-8c8458e090b3",
+      "name": "Upload file",
+      "retryOnFail": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=📄\n\nHello,\n\nAn invoice has been uploaded to Drive folder.\n\nFilename: {{ $json['invoice number'] }}\n\n\nEmail title:  {{ $('Gmail Trigger').item.json.headers.subject }}\n\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1744,
+        48
+      ],
+      "id": "20b0b726-3c50-4a92-b911-dca0c1b293af",
+      "name": "Send a text message1",
+      "webhookId": "YOUR_WEBHOOK_ID_1",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "invoice number": "={{ $json.name }}",
+            "uploaded": "={{ $now.format('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [
+            "invoice number"
+          ],
+          "schema": [
+            {
+              "id": "invoice number",
+              "displayName": "invoice number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "uploaded",
+              "displayName": "uploaded",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        192
+      ],
+      "id": "b9f70fe3-208b-4a4b-8a18-d4fdd63d31b8",
+      "name": "Log uploaded files",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "=invoice number",
+              "lookupValue": "={{ $binary.data.fileName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        608,
+        80
+      ],
+      "id": "93c720f7-67a5-4f43-acf7-7a2e37efd176",
+      "name": "Check existing filename",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "44f1d90a-cd47-4596-a1b2-1e17add112ec",
+              "leftValue": "={{ $json.row_number !== undefined }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        80
+      ],
+      "id": "20fd8938-1319-4170-998c-ce3eb2cb9849",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => ({\n  json: item.json,\n  binary: $('Code - atmnt name chk').item.binary\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        192
+      ],
+      "id": "0b739f5f-6506-4320-865a-b3b8d741adb4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🗑️\n\nHello,\n\nA duplicate invoice arrived in email, so it was not uploaded to Drive folder.\n\nFilename: {{ $json['invoice number'] }}\n\n\nEmail title:  {{ $('Gmail Trigger').item.json.headers.subject }}\n\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1088,
+        -32
+      ],
+      "id": "4d9795aa-f29d-4f2b-aa78-c030e2d1f81f",
+      "name": "Send a text message2",
+      "webhookId": "YOUR_WEBHOOK_ID_1",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "output": "={{ (() => {\n  const body = ($json.text || '').toLowerCase();\n  if (body.includes('paddle.com')) return 0;\n  if (body.includes('billingo.hu')) return 1;\n  if (body.includes('szamlazz.hu')) return 2;\n  return 3;\n})() }}"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1440,
+        224
+      ],
+      "id": "2519fe79-3f42-4db5-aeb8-6672e1207779",
+      "name": "Switch platforms"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🚧 🚧 🚧\n\nHello,\n\nYou received an email referring to an invoice without attachment, but the platform is not recognised.\n\nEmail title:  {{ $json.subject\n\n}}\n\n ",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1104,
+        736
+      ],
+      "id": "031a9365-3713-4f44-b81f-daf51cb65da5",
+      "name": "Send a text message3",
+      "webhookId": "YOUR_WEBHOOK_ID_1",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst text = item.json.text || '';\n\nconst trackingLinkPattern = /https:\\/\\/ses-track\\.billingo\\.hu\\/CL0\\/([^\\s]+)/;\nconst match = text.match(trackingLinkPattern);\n\nif (!match) {\n  return [{ json: { ...item.json, billingoLink: null, error: 'link not found' } }];\n}\n\nconst decoded = decodeURIComponent(match[1]);\nconst tokenMatch = decoded.match(/document-access\\/([^\\/]+)/);\n\nif (!tokenMatch) {\n  return [{ json: { ...item.json, billingoLink: null, error: 'token not found' } }];\n}\n\nconst token = tokenMatch[1];\nconst downloadUrl = `https://app.billingo.hu/document-access/${token}/download`;\n\nreturn [{ json: { ...item.json, billingoLink: downloadUrl } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        288
+      ],
+      "id": "0d8abd97-a9db-4995-95db-6fc1e59ba77b",
+      "name": "Code Billingo"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.billingoLink }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -528,
+        288
+      ],
+      "id": "c3aeb612-70c7-4f80-898b-d5651772f04c",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst text = item.json.text || '';\n\nconst linkPattern = /https:\\/\\/(?:www\\.)?szamlazz\\.hu\\/szamla\\/fiok\\/([^\\s?]+)/;\nconst match = text.match(linkPattern);\n\nif (!match) {\n  return [{ json: { ...item.json, szamlazzEmailLink: null, partguid: null, error: 'link not found' } }];\n}\n\nconst fullMatch = match[0];\nconst partguid = match[1]; // path token, used as partguid in download URL\n\nreturn [{ json: { ...item.json, szamlazzEmailLink: fullMatch, partguid } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        512
+      ],
+      "id": "19563466-3b05-4d11-bca9-f0813113d9d7",
+      "name": "Code Szamlazz"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.szamlazzEmailLink }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "DownloadPageData"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -912,
+        512
+      ],
+      "id": "30d69732-93e1-4a44-8bb7-6b9ac7f28292",
+      "name": "HTTP Request1",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst html = item.json.DownloadPageData || item.json.body || '';\nconst partguid = $('Code Szamlazz').item.json.partguid; \n\nconst szfejPattern = /szfej_id=(\\d+)/;\nconst match = html.match(szfejPattern);\n\nif (!match) {\n  return [{ json: { ...item.json, szamlazzDownloadLink: null, error: 'szfej_id not found' } }];\n}\n\nconst szfejId = match[1];\nconst downloadUrl = `https://www.szamlazz.hu/szamla/?action=szamlapdf&szfej_id=${szfejId}&partguid=${partguid}&content_disp_type=attachment`;\n\nconst invoiceNumberMatch = html.match(/txt16 txtBold nowrap\">([^<]+)</);\nconst invoiceNumber = invoiceNumberMatch ? invoiceNumberMatch[1].trim() : null;\n\nreturn [{ json: { ...item.json, szamlazzDownloadLink: downloadUrl, invoiceNumber: invoiceNumber} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        512
+      ],
+      "id": "586a6a32-2f63-4b44-ab71-00b157fa8060",
+      "name": "Code Szamlazz2"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.szamlazzDownloadLink }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -528,
+        512
+      ],
+      "id": "3ebc6243-c48b-4683-9c20-8685ee420288",
+      "name": "HTTP Request2",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst invoiceNumber = item.json.invoiceNumber || 'invoice';\nitem.binary.data.fileName = `${invoiceNumber}.pdf`;\nreturn [item];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        512
+      ],
+      "id": "e698d84e-f90a-46cf-85ea-32abbb0b16f0",
+      "name": "Code Szamlazz3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst text = item.json.text || '';\n\nconst linkPattern = /https:\\/\\/my\\.paddle\\.com\\/(?:invoice|receipt)\\/[^\\s\\)]+/;\nconst match = text.match(linkPattern);\n\nif (!match) {\n  return [{ json: { ...item.json, paddleLink: null, error: 'link not found' } }];\n}\n\nreturn [{ json: { ...item.json, paddleLink: match[0] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        112
+      ],
+      "id": "6dbcc421-d9be-47d0-8b62-2f6432dbe7dd",
+      "name": "Code Paddle"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apiflash.com/v1/urltoimage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_key",
+              "value": "YOUR_APIFLASH_ACCESS_KEY"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.paddleLink }}"
+            },
+            {
+              "name": "format",
+              "value": "png"
+            },
+            {
+              "name": "full_page",
+              "value": "true"
+            },
+            {
+              "name": "delay",
+              "value": "3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -528,
+        112
+      ],
+      "id": "a9fb8b5f-6c89-434b-a416-ad4dd6f49e18",
+      "name": "HTTP Request3",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst url = item.json.paddleLink || '';\n\n// extract receipt/invoice number from the URL\nconst match = url.match(/receipt\\/(\\d+-\\d+)/);\nconst invoiceNumber = match ? match[1] : 'paddle_invoice';\n\nitem.binary.data.fileName = `${invoiceNumber}.png`;\nreturn [item];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        112
+      ],
+      "id": "5cd49b00-6e16-4e1c-9400-9d95e92cf8bc",
+      "name": "Code Paddle2"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=❌ Step failed\n\nOn of the http requests of file upload node failed.\n\nError mesage: {{ $json.error?.message || 'unknown error' }}\n\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        96,
+        880
+      ],
+      "id": "ebc89f9a-797c-4414-9182-a4ade302b672",
+      "name": "Send an error message",
+      "webhookId": "YOUR_WEBHOOK_ID_2",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code - filter emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - filter emails": {
+      "main": [
+        [
+          {
+            "node": "If - has attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - has attachment": {
+      "main": [
+        [
+          {
+            "node": "Code - atmnt name chk",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch platforms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - atmnt name chk": {
+      "main": [
+        [
+          {
+            "node": "If - nofile to save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - nofile to save": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check existing filename",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Log uploaded files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log uploaded files": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check existing filename": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch platforms": {
+      "main": [
+        [
+          {
+            "node": "Code Paddle",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code Billingo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code Szamlazz",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message3": {
+      "main": [
+        []
+      ]
+    },
+    "Code Billingo": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code - atmnt name chk",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Szamlazz": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code Szamlazz2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Szamlazz2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code Szamlazz3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Szamlazz3": {
+      "main": [
+        [
+          {
+            "node": "Code - atmnt name chk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Paddle": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Code Paddle2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Paddle2": {
+      "main": [
+        [
+          {
+            "node": "Code - atmnt name chk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "YOUR_ERROR_WORKFLOW_ID",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "d970f7db-7cfa-4b05-a951-03b43328f120",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
